@@ -2,8 +2,8 @@
   "name": "Hello World",
   "version": "1.0",
   "manifest_version": 3,
-  "permissions": ["cookies", "activeTab", "storage", "tabs"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["cookies", "activeTab", "storage"],
+  "host_permissions": ["https://*.tiktok.com/*", "http://*.tiktok.com/*"],
   "description": "My first Chrome extension.",
   "action": {
     "default_popup": "popup/popup.html"
@@ -11,7 +11,7 @@
   "web_accessible_resources": [
     {
       "resources": ["popup/config.js"],
-      "matches": ["<all_urls>"]
+      "matches": ["https://affiliate.tiktok.com/*"]
     }
   ]
 }
