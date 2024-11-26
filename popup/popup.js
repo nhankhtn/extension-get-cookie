@@ -1,32 +1,35 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const consentSection = document.getElementById('consent-section');
     const cookieSection = document.getElementById('cookie-section');
-    const acceptBtn = document.getElementById('acceptBtn');
-    const rejectBtn = document.getElementById('rejectBtn');
 
-    chrome.storage.local.get(['cookieConsent'], function (result) {
-        if (result.cookieConsent) {
-            saveCookiesToAPI();
-        }
-    });
-
-    acceptBtn.addEventListener('click', function () {
-        chrome.storage.local.set({ cookieConsent: true }, function () {
-            saveCookiesToAPI();
+    async function fetchShopInfo() {
+        const resGetShopInfo = await fetch(CONFIG.API_SHOP, {
+            method: 'GET',
+            credentials: 'include',
         });
-    });
+        return await resGetShopInfo.json();
+    }
 
-    rejectBtn.addEventListener('click', function () {
-        chrome.storage.local.set({ cookieConsent: false }, function () {
-            cookieSection.classList.add('hidden');
-            consentSection.classList.remove('hidden');
+    async function fetchExistingCookies(shopName) {
+        const resGetCookies = await fetch(`${CONFIG.API_URL}?where=%28username%2Ceq%2C${shopName}%29`, {
+            headers: {
+                "xc-token": CONFIG.API_TOKEN
+            }
         });
-    });
+        return await resGetCookies.json();
+    }
+
+    async function saveCookiesToServer(method, data) {
+        await fetch(CONFIG.API_URL, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                "xc-token": CONFIG.API_TOKEN
+            },
+            body: JSON.stringify(data)
+        });
+    }
 
     function saveCookiesToAPI() {
-        consentSection.classList.add('hidden');
-        cookieSection.classList.remove('hidden');
-
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
             if (tabs[0]) {
                 const url = new URL(tabs[0].url);
@@ -40,11 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     try {
                         // fetch API to get shop info
-                        const resGetShopInfo = await fetch(CONFIG.API_SHOP, {
-                            method: 'GET',
-                            credentials: 'include',
-                        });
-                        const resp = await resGetShopInfo.json();
+                        const resp = await fetchShopInfo();
 
                         // Check error when user not login
                         if (resp.code !== 0) {
@@ -52,6 +51,19 @@ document.addEventListener('DOMContentLoaded', function () {
                             return;
                         }
 
+                        // Check if cookies already exist in API to update cookies
+                        const respCookies = await fetchExistingCookies(resp.shop_name);
+
+                        if (respCookies.list.length > 0) {
+                            await saveCookiesToServer('PATCH', {
+                                Id: respCookies.list[0].Id,
+                                data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
+                            });
+                            cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
+                            return;
+                        }
+
+                        // Save cookies to API if cookies not exist in API
                         const data = {
                             site: "affiliate.tiktok.com",
                             data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
@@ -59,21 +71,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
 
                         // fetch API to save cookies
-                        await fetch(CONFIG.API_URL, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                "xc-token": CONFIG.API_TOKEN
-                            },
-                            body: JSON.stringify(data)
-                        });
+                        await saveCookiesToServer('POST', data);
                         cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
                     } catch (error) {
-                        console.error('Error fetching shop info:', error);
+                        console.error('Error updating cookies:', error);
                         cookieSection.innerHTML = '<span style="color: red;">✗ Failed</span>';
                     }
                 });
             }
         });
     };
+
+    saveCookiesToAPI();
 });
