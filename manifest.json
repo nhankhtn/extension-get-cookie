@@ -3,7 +3,13 @@
   "version": "1.0",
   "manifest_version": 3,
   "permissions": ["cookies", "activeTab", "storage"],
-  "host_permissions": ["https://*.tiktok.com/*", "http://*.tiktok.com/*"],
+  "host_permissions": [
+    "https://*.tiktok.com/*",
+    "http://*.tiktok.com/*",
+    "http://partner.tiktokshop.com/*",
+    "https://partner.tiktokshop.com/*",
+    "https://api-partner-va.tiktokshop.com/*"
+  ],
   "description": "My first Chrome extension.",
   "action": {
     "default_popup": "popup/popup.html"
@@ -11,7 +17,10 @@
   "web_accessible_resources": [
     {
       "resources": ["popup/config.js"],
-      "matches": ["https://affiliate.tiktok.com/*"]
+      "matches": [
+        "https://affiliate.tiktok.com/*",
+        "https://partner.tiktokshop.com/*"
+      ]
     }
   ]
 }

@@ -1,16 +1,19 @@
 document.addEventListener('DOMContentLoaded', function () {
     const cookieSection = document.getElementById('cookie-section');
 
-    async function fetchShopInfo() {
-        const resGetShopInfo = await fetch(CONFIG.API_SHOP, {
+    async function fetchInfo(url) {
+        const respGetInfo = await fetch(url, {
             method: 'GET',
             credentials: 'include',
         });
-        return await resGetShopInfo.json();
+        return await respGetInfo.json();
     }
 
-    async function fetchExistingCookies(shopName) {
-        const resGetCookies = await fetch(`${CONFIG.API_URL}?where=%28username%2Ceq%2C${shopName}%29`, {
+    async function fetchExistingCookies(url, params) {
+        const queryString =
+            Object.entries(params).map(([key, value]) => `where=%28${key}%2Ceq%2C${value}%29`).join('&');
+
+        const resGetCookies = await fetch(`${url}?${queryString}`, {
             headers: {
                 "xc-token": CONFIG.API_TOKEN
             }
@@ -18,8 +21,8 @@ document.addEventListener('DOMContentLoaded', function () {
         return await resGetCookies.json();
     }
 
-    async function saveCookiesToServer(method, data) {
-        await fetch(CONFIG.API_URL, {
+    async function saveCookiesToServer(url, method, data) {
+        await fetch(url, {
             method,
             headers: {
                 'Content-Type': 'application/json',
@@ -29,53 +32,104 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    async function updateCookieAffiliate(filteredCookies) {
+        try {
+            // fetch API to get shop info
+            const resp = await fetchInfo(CONFIG.API_SHOP);
+
+            // Check error when user not login
+            if (resp.code !== 0) {
+                cookieSection.innerHTML = `<span style="color: red;">✗ ${resp.message}</span>`;
+                return;
+            }
+
+            // Check if cookies already exist in API to update cookies
+            const respCookies = await fetchExistingCookies(CONFIG.API_URL, {
+                username: resp.shop_name
+            });
+
+            if (respCookies.list.length > 0) {
+                await saveCookiesToServer(CONFIG.API_URL, 'PATCH', {
+                    Id: respCookies.list[0].Id,
+                    data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
+                });
+                cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
+                return;
+            }
+
+            // Save cookies to API if cookies not exist in API
+            const data = {
+                site: "affiliate.tiktok.com",
+                data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
+                username: resp.shop_name
+            }
+
+            // fetch API to save cookies
+            await saveCookiesToServer(CONFIG.API_URL, 'POST', data);
+            cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
+        } catch (error) {
+            console.error('Error updating cookies:', error);
+            cookieSection.innerHTML = '<span style="color: red;">✗ Failed</span>';
+        }
+    }
+
+    async function updateCookiePartner(filteredCookies) {
+        try { // fetch API to get shop info
+            const resp = await fetchInfo(CONFIG.API_PARTNER);
+
+            // Check error when user not login
+            if (resp.code !== 0) {
+                cookieSection.innerHTML = `<span style="color: red;">✗ ${resp.message}</span>`;
+                return;
+            }
+
+            // Check if cookies already exist in API to update cookies
+            const respCookies = await fetchExistingCookies(CONFIG.API_URL_DB_PARTNER, {
+                partner_id: resp.data.partner_id
+            });
+
+            if (respCookies.list.length > 0) {
+                await saveCookiesToServer(CONFIG.API_URL_DB_PARTNER, 'PATCH', {
+                    Id: respCookies.list[0].Id,
+                    data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
+                });
+                cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
+                return;
+            }
+
+            // Save cookies to API if cookies not exist in API
+            const data = {
+                data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
+                partner_id: resp.data.partner_id
+            }
+
+            // fetch API to save cookies
+            await saveCookiesToServer(CONFIG.API_URL_DB_PARTNER, 'POST', data);
+            cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
+        } catch (error) {
+            console.error('Error updating cookies:', error);
+            cookieSection.innerHTML = '<span style="color: red;">✗ Failed</span>';
+        }
+    }
+
     function saveCookiesToAPI() {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
             if (tabs[0]) {
                 const url = new URL(tabs[0].url);
-                if (!url.hostname.includes('affiliate.tiktok.com')) {
-                    cookieSection.innerHTML = `<span style="color: red;">✗ Please open affiliate.tiktok.com</span>`;
+
+                if (!url.hostname.includes('affiliate.tiktok.com') && !url.hostname.includes('partner.tiktokshop.com')) {
+                    cookieSection.innerHTML = `<span style="color: red;">✗ URL invalid</span>`;
                     return;
                 }
 
                 chrome.cookies.getAll({}, async function (cookies) {
                     const filteredCookies = cookies.filter(cookie => cookie.domain === '.tiktok.com' || cookie.domain === 'affiliate.tiktok.com');
 
-                    try {
-                        // fetch API to get shop info
-                        const resp = await fetchShopInfo();
-
-                        // Check error when user not login
-                        if (resp.code !== 0) {
-                            cookieSection.innerHTML = `<span style="color: red;">✗ ${resp.message}</span>`;
-                            return;
-                        }
-
-                        // Check if cookies already exist in API to update cookies
-                        const respCookies = await fetchExistingCookies(resp.shop_name);
-
-                        if (respCookies.list.length > 0) {
-                            await saveCookiesToServer('PATCH', {
-                                Id: respCookies.list[0].Id,
-                                data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
-                            });
-                            cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
-                            return;
-                        }
-
-                        // Save cookies to API if cookies not exist in API
-                        const data = {
-                            site: "affiliate.tiktok.com",
-                            data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
-                            username: resp.shop_name
-                        }
-
-                        // fetch API to save cookies
-                        await saveCookiesToServer('POST', data);
-                        cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
-                    } catch (error) {
-                        console.error('Error updating cookies:', error);
-                        cookieSection.innerHTML = '<span style="color: red;">✗ Failed</span>';
+                    if (url.hostname.includes("affiliate.tiktok.com")) {
+                        updateCookieAffiliate(filteredCookies);
+                    }
+                    else {
+                        updateCookiePartner(filteredCookies);
                     }
                 });
             }
