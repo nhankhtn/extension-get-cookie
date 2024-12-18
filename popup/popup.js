@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', function () {
     const cookieSection = document.getElementById('cookie-section');
 
-    async function fetchInfo(url) {
-        const respGetInfo = await fetch(url, {
+    async function fetchInfo(url, params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        const respGetInfo = await fetch(`${url}?${queryString}`, {
             method: 'GET',
             credentials: 'include',
         });
@@ -75,17 +76,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function updateCookiePartner(filteredCookies) {
         try { // fetch API to get shop info
-            const resp = await fetchInfo(CONFIG.API_PARTNER);
+            const resp = await fetchInfo(CONFIG.API_PARTNER, {
+                partner_type: 1
+            });
 
             // Check error when user not login
             if (resp.code !== 0) {
                 cookieSection.innerHTML = `<span style="color: red;">✗ ${resp.message}</span>`;
                 return;
             }
-
+            const partner_id = resp.data.partner_biz_role_info.market_list[0].type_list.find(type => type.type === 1).partner_id;
             // Check if cookies already exist in API to update cookies
             const respCookies = await fetchExistingCookies(CONFIG.API_URL_DB_PARTNER, {
-                partner_id: resp.data.partner_id
+                partner_id
             });
 
             if (respCookies.list.length > 0) {
@@ -100,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Save cookies to API if cookies not exist in API
             const data = {
                 data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
-                partner_id: resp.data.partner_id
+                partner_id
             }
 
             // fetch API to save cookies
