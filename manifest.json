@@ -6,9 +6,8 @@
   "host_permissions": [
     "https://*.tiktok.com/*",
     "http://*.tiktok.com/*",
-    "http://partner.tiktokshop.com/*",
-    "https://partner.tiktokshop.com/*",
-    "https://api-partner-va.tiktokshop.com/*"
+    "http://*.tiktokshop.com/*",
+    "https://*.tiktokshop.com/*"
   ],
   "description": "My first Chrome extension.",
   "action": {

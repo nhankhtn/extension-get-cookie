@@ -129,7 +129,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 chrome.cookies.getAll({}, async function (cookies) {
-                    const filteredCookies = cookies.filter(cookie => cookie.domain === '.tiktok.com' || cookie.domain === 'affiliate.tiktok.com');
+                    const filteredCookies = cookies.filter(cookie =>
+                        url.hostname.includes('affiliate.tiktok.com')
+                            ? cookie.domain.includes('.tiktok.com')
+                            : cookie.domain.includes('.tiktokshop.com')
+                    );
 
                     if (url.hostname.includes("affiliate.tiktok.com")) {
                         updateCookieAffiliate(filteredCookies);
