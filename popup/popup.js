@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (respCookies.list.length > 0) {
                 await saveCookiesToServer(CONFIG.API_URL, 'PATCH', {
-                    Id: respCookies.list[0].Id,
+                    id: respCookies.list[0].id,
                     data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
                 });
                 cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (respCookies.list.length > 0) {
                 await saveCookiesToServer(CONFIG.API_URL_DB_PARTNER, 'PATCH', {
-                    Id: respCookies.list[0].Id,
+                    id: respCookies.list[0].id,
                     data: filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ')
                 });
                 cookieSection.innerHTML = '<span style="color: green;">✓ Success</span>';
